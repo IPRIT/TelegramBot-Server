@@ -1,9 +1,15 @@
 /**
- * Created by Александр on 25.06.2015.
+ * Created by Aleksandr Belov 25.06.2015.
  */
+var http = require("http");
+var bl = require("bl");
+
 
 module.exports = {
-    log: Logger
+    log: Logger,
+    http: {
+        get: httpRequest
+    }
 };
 
 function Logger() {
@@ -18,4 +24,43 @@ function Logger() {
             ':' + zeroFill(date.getSeconds()) + ']';
     args.unshift(curTime);
     console.log.apply(console, args);
+}
+
+function httpRequest(url, params, cb) {
+    function httpGet(url, callback) {
+        var result = '';
+        http.get(url, function(res) {
+            res.setEncoding('utf8');
+     
+            res.pipe(bl(function(err, data) {
+                result += data.toString();
+            }));
+     
+            res.on('error', function(e) {
+                callback(e);
+            });
+     
+            res.on('end', function() {
+                callback(null, result);
+            });
+        });
+    };
+    
+    function encodeParams(params) {
+        var pairs = [];
+        for (var el in params) {
+            if (!params.hasOwnProperty(el)) continue;
+            pairs.push(el + '=' + encodeURIComponent(params[el]));
+        }
+        return pairs.join('&');
+    }
+    
+    url += '?' + encodeParams(params);
+    
+    httpGet(url, function(err, response) {
+        if (err) {
+            return cb(true);
+        }
+        return cb(false, response);
+    })
 }
